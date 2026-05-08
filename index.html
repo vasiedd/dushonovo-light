@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Душоново: обращения по электричеству</title>
+  <script src="config.js"></script>
+  <script src="outages.js"></script>
+  <style>
+    :root {
+      --bg: #f5f5f2;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #667085;
+      --border: #d9dee7;
+      --accent: #2344c4;
+      --accent-dark: #18318f;
+      --danger: #a53232;
+      --ok: #19703a;
+      --soft: #eef2ff;
+      --shadow: 0 10px 30px rgba(16, 24, 40, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 18px 14px 56px; }
+    header {
+      background: linear-gradient(135deg, #111827, #26346c);
+      color: #fff;
+      border-radius: 22px;
+      padding: 24px 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 30px; line-height: 1.08; margin: 0 0 12px; }
+    h2 { font-size: 24px; margin: 0 0 12px; }
+    h3 { font-size: 19px; margin: 0 0 8px; }
+    p { margin: 0 0 12px; }
+    .lead { color: rgba(255,255,255,.88); font-size: 17px; max-width: 760px; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      margin: 14px 0;
+      box-shadow: var(--shadow);
+    }
+    .soft-card { background: var(--soft); border-color: #c7d2fe; }
+    .muted { color: var(--muted); }
+    .small { font-size: 14px; }
+    .grid { display: grid; gap: 12px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    button, .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 16px;
+      min-height: 48px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 15px;
+      line-height: 1.15;
+      touch-action: manipulation;
+    }
+    button:hover, .btn:hover { background: var(--accent-dark); }
+    button.secondary, .btn.secondary { background: #e5e7eb; color: #111827; }
+    button.secondary:hover, .btn.secondary:hover { background: #d1d5db; }
+    button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+    button.ghost:hover { background: #eef2ff; }
+    button.danger { background: var(--danger); }
+    button.ok { background: var(--ok); }
+    label { display: block; font-weight: 700; margin: 12px 0 6px; }
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 12px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+      min-height: 48px;
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    .checkline {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: start;
+      margin: 14px 0;
+    }
+    .checkline input { width: 22px; height: 22px; min-height: 22px; margin-top: 2px; }
+    .error { color: var(--danger); font-weight: 700; margin: 10px 0; }
+    .ok-text { color: var(--ok); font-weight: 700; margin: 10px 0; }
+    .warning { background: #fff7ed; border: 1px solid #fed7aa; padding: 12px; border-radius: 14px; color: #7c2d12; }
+    .agency-card { border-left: 5px solid var(--accent); }
+    .agency-card.second { border-left-color: #7c3aed; }
+    .agency-card.extra { border-left-color: #6b7280; }
+    .badge { display: inline-block; padding: 4px 9px; border-radius: 999px; background: #eef2ff; color: #283593; font-size: 13px; font-weight: 700; }
+    .outage { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .outage:last-child { border-bottom: 0; }
+    .mono { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+    dialog {
+      border: 0;
+      border-radius: 18px;
+      width: min(900px, calc(100% - 22px));
+      max-height: 88vh;
+      padding: 0;
+      box-shadow: 0 22px 70px rgba(0,0,0,.35);
+    }
+    dialog::backdrop { background: rgba(0,0,0,.45); }
+    .dialog-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .dialog-body { padding: 16px; overflow: auto; max-height: 68vh; }
+    .dialog-actions { padding: 14px 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; }
+    .notice { position: fixed; left: 14px; right: 14px; bottom: 14px; background: #111827; color: white; padding: 13px 14px; border-radius: 14px; box-shadow: var(--shadow); display: none; z-index: 20; }
+    .notice.show { display: block; }
+    details { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin: 12px 0; }
+    summary { cursor: pointer; font-weight: 800; font-size: 18px; }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 10px 10px 44px; }
+      header { padding: 20px 14px; border-radius: 18px; }
+      h1 { font-size: 27px; }
+      .grid.two { grid-template-columns: 1fr; }
+      button, .btn { width: 100%; }
+      .actions { flex-direction: column; }
+      .dialog-actions button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Вернём нормальное электричество в Душоново</h1>
+      <p class="lead">Сайт подготовит тексты обращений. Отправляете вы сами через официальные сайты. Пароли не нужны.</p>
+      <div class="actions">
+        <button data-go="data">Подготовить обращения</button>
+        <button class="secondary" data-go="outages">Журнал отключений</button>
+        <button class="secondary" id="quickAnswerBtn">Загрузить ответ</button>
+        <button class="secondary" data-go="stats">Статистика</button>
+        <button class="secondary" data-go="how">Как это работает</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="home" class="section active">
+        <div class="card soft-card">
+          <h2>Коротко</h2>
+          <p>Сайт не отправляет жалобы за жителей. Он только готовит текст, открывает нужный сайт ведомства и помогает зафиксировать факт отправки.</p>
+          <p>В общую статистику попадает не нажатие кнопки, а подтверждение: номер обращения, скрин, автоответ или файл.</p>
+        </div>
+        <div class="card">
+          <h2>Что сделать</h2>
+          <p>Сначала заполните свои данные. Потом сайт покажет обращения первой волны: Россети, Мосэнергосбыт, Добродел/Минэнерго МО и администрация Щёлково.</p>
+          <button data-go="data">Начать</button>
+        </div>
+      </section>
+
+      <section id="data" class="section">
+        <div class="card">
+          <h2>Ваши данные</h2>
+          <p class="muted">Они сохраняются только на этом устройстве. В репозиторий и на сервер сайта они не отправляются.</p>
+          <div id="formError" class="error" hidden></div>
+          <div id="formOk" class="ok-text" hidden></div>
+          <label for="fullName">ФИО</label>
+          <input id="fullName" autocomplete="name" placeholder="Иванов Иван Иванович">
+          <label for="phone">Телефон</label>
+          <input id="phone" autocomplete="tel" placeholder="+7 900 000-00-00">
+          <label for="email">Email</label>
+          <input id="email" autocomplete="email" inputmode="email" placeholder="mail@example.ru">
+          <label for="address">Адрес в Душоново</label>
+          <textarea id="address" placeholder="Село Душоново, улица, дом/участок"></textarea>
+          <label for="account">Лицевой счёт Мосэнергосбыта, если есть</label>
+          <input id="account" placeholder="необязательно">
+          <label for="userComment">Комментарий, если хотите</label>
+          <textarea id="userComment" placeholder="Например: отключения затрагивали насос, холодильник, отопление"></textarea>
+          <div class="checkline">
+            <input id="consent" type="checkbox">
+            <div><strong>Подтверждаю, что мой адрес в селе Душоново был затронут отключениями электроэнергии.</strong><br><span class="muted">Понимаю, что обращения отправляю самостоятельно от своего имени.</span></div>
+          </div>
+          <div class="actions">
+            <button id="saveDataBtn">Сохранить</button>
+            <button id="makeAppealsBtn" class="ok">Сформировать обращения</button>
+            <button id="clearDataBtn" class="danger">Очистить мои данные с этого устройства</button>
+            <button class="secondary" data-go="home">На главную</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="appeals" class="section">
+        <div class="card soft-card">
+          <h2>Обращения</h2>
+          <p>Начните с первой волны. После отправки каждого обращения вернитесь сюда и нажмите «Я отправил».</p>
+        </div>
+        <div id="firstWave"></div>
+        <details>
+          <summary>Вторая волна</summary>
+          <p class="muted">Лучше использовать после первых ответов, отписок или новой аварии.</p>
+          <div id="secondWave"></div>
+        </details>
+        <details>
+          <summary>Дополнительно</summary>
+          <div id="extraWave"></div>
+        </details>
+        <button class="secondary" data-go="data">Вернуться к данным</button>
+      </section>
+
+      <section id="outages" class="section">
+        <div class="card">
+          <h2>Журнал отключений</h2>
+          <p class="warning">Это гражданский журнал по сообщениям сельского чата. Он не заменяет официальные журналы сетевой организации, поэтому в обращениях мы просим ведомства проверить эти сведения.</p>
+          <div id="outageList"></div>
+        </div>
+        <button class="secondary" data-go="home">На главную</button>
+      </section>
+
+      <section id="stats" class="section">
+        <div class="card">
+          <h2>Статистика</h2>
+          <p class="muted">Статистика обновляется инициативной группой по данным Яндекс.Форм.</p>
+          <div id="statsBox"></div>
+          <p class="warning">Считаем только подтверждённые отправки: номер обращения, скрин, автоответ или файл. Простое нажатие кнопки не считается.</p>
+        </div>
+        <button class="secondary" data-go="home">На главную</button>
+      </section>
+
+      <section id="how" class="section">
+        <div class="card">
+          <h2>Как это работает</h2>
+          <p>Сайт не отправляет обращения за вас. Вы сами отправляете обращение через официальный сайт ведомства.</p>
+          <p>Сайт только готовит текст, подставляет общий журнал отключений и ведёт к нужному месту.</p>
+          <p>После отправки нужно сохранить номер обращения или загрузить скрин. Ответы ведомств тоже нужно загружать, чтобы собрать доказательную базу.</p>
+          <p>Персональные данные хранятся на вашем устройстве до перехода в Яндекс.Форму.</p>
+        </div>
+        <button class="secondary" data-go="home">На главную</button>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="appealDialog">
+    <div class="dialog-head">
+      <strong id="dialogTitle">Текст обращения</strong>
+      <button class="secondary" id="closeDialogBtn" type="button">Закрыть</button>
+    </div>
+    <div class="dialog-body">
+      <pre id="appealText" class="mono"></pre>
+    </div>
+    <div class="dialog-actions">
+      <button id="copyDialogBtn">Скопировать</button>
+      <button class="secondary" id="closeDialogBtn2" type="button">Закрыть</button>
+    </div>
+  </dialog>
+
+  <div id="notice" class="notice"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const config = window.APP_CONFIG || {};
+      const outages = Array.isArray(window.OUTAGES) ? window.OUTAGES : [];
+      const storageKey = "dushonovo_light_user_v1";
+      let activeAgencyId = null;
+      let lastAppealText = "";
+
+      const $ = (id) => document.getElementById(id);
+      const sections = Array.from(document.querySelectorAll(".section"));
+
+      function showNotice(message) {
+        const el = $("notice");
+        el.textContent = message;
+        el.classList.add("show");
+        window.setTimeout(() => el.classList.remove("show"), 4200);
+      }
+
+      function go(sectionId) {
+        sections.forEach((s) => s.classList.toggle("active", s.id === sectionId));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function getUserData() {
+        return {
+          fullName: $("fullName").value.trim(),
+          phone: $("phone").value.trim(),
+          email: $("email").value.trim(),
+          address: $("address").value.trim(),
+          account: $("account").value.trim(),
+          userComment: $("userComment").value.trim(),
+          consent: $("consent").checked
+        };
+      }
+
+      function setUserData(data) {
+        $("fullName").value = data.fullName || "";
+        $("phone").value = data.phone || "";
+        $("email").value = data.email || "";
+        $("address").value = data.address || "";
+        $("account").value = data.account || "";
+        $("userComment").value = data.userComment || "";
+        $("consent").checked = Boolean(data.consent);
+      }
+
+      function saveUserData() {
+        localStorage.setItem(storageKey, JSON.stringify(getUserData()));
+        $("formOk").hidden = false;
+        $("formOk").textContent = "Данные сохранены на этом устройстве.";
+        $("formError").hidden = true;
+      }
+
+      function loadUserData() {
+        try {
+          const raw = localStorage.getItem(storageKey);
+          if (raw) setUserData(JSON.parse(raw));
+        } catch (e) {
+          localStorage.removeItem(storageKey);
+        }
+      }
+
+      function clearUserData() {
+        localStorage.removeItem(storageKey);
+        setUserData({});
+        showNotice("Данные удалены с этого устройства.");
+      }
+
+      function validateUserData() {
+        const data = getUserData();
+        const missing = [];
+        if (!data.fullName) missing.push("ФИО");
+        if (!data.phone) missing.push("телефон");
+        if (!data.email) missing.push("почта");
+        if (!data.address) missing.push("адрес");
+        if (!data.consent) missing.push("подтверждение");
+        if (missing.length) {
+          $("formError").hidden = false;
+          $("formError").textContent = "Заполните: " + missing.join(", ") + ".";
+          $("formOk").hidden = true;
+          return false;
+        }
+        return true;
+      }
+
+      function todayRu() {
+        const d = new Date();
+        return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear();
+      }
+
+      function agencyById(id) {
+        return (config.agencies || []).find((a) => a.id === id);
+      }
+
+      function waveClass(wave) {
+        if (wave === "second") return "second";
+        if (wave === "extra") return "extra";
+        return "";
+      }
+
+      function waveLabel(wave) {
+        if (wave === "second") return "вторая волна";
+        if (wave === "extra") return "дополнительно";
+        return "первая волна";
+      }
+
+      function buildOutageInsert() {
+        if (typeof window.OUTAGES_LETTER_INSERT === "string" && window.OUTAGES_LETTER_INSERT.trim()) {
+          return window.OUTAGES_LETTER_INSERT.trim();
+        }
+        if (!outages.length) return "Журнал отключений пока не загружен.";
+        return outages.slice(0, 20).map((o, i) => {
+          const end = o.end && o.end !== "не установлено" ? o.end : "окончание не установлено";
+          return `${i + 1}. ${o.dateRu || o.date}: ${o.start || "начало не установлено"} — ${end}, ${o.duration || "длительность не установлена"}. Уверенность: ${o.confidence || "не указана"}.`;
+        }).join("\n");
+      }
+
+      function userBlock(user) {
+        const account = user.account ? `\nЛицевой счёт Мосэнергосбыта: ${user.account}` : "";
+        const comment = user.userComment ? `\nКомментарий заявителя: ${user.userComment}` : "";
+        return `от: ${user.fullName}\nадрес: ${user.address}\nтелефон: ${user.phone}\nemail: ${user.email}${account}${comment}`;
+      }
+
+      function commonFactsBlock() {
+        return `По журналу жителей села Душоново, составленному по сообщениям сельского Telegram-чата, зафиксированы повторяющиеся отключения и эпизоды некачественного электроснабжения. Этот журнал не является официальным журналом сетевой организации. Прошу проверить указанные сведения по официальным диспетчерским, аварийным и эксплуатационным журналам.\n\n${buildOutageInsert()}`;
+      }
+
+      function generateAppeal(agencyId, user) {
+        const agency = agencyById(agencyId);
+        const facts = commonFactsBlock();
+        const from = userBlock(user);
+        const date = todayRu();
+        const baseIntro = `Я проживаю / пользуюсь электроэнергией по адресу: ${user.address}. Мой адрес был затронут повторяющимися отключениями электроэнергии в селе Душоново городского округа Щёлково Московской области.`;
+
+        const templates = {
+          rosseti: `В ПАО «Россети Московский регион»\n\n${from}\n\nЗаявление\n\n${baseIntro}\n\n${facts}\n\nПрошу:\n1. Зарегистрировать обращение и сообщить номер.\n2. Установить, какая сетевая организация, РЭС, фидер, линия и трансформаторная подстанция обеспечивают электроснабжение моего адреса.\n3. Проверить причины повторяющихся отключений и эпизодов некачественного электроснабжения в селе Душоново.\n4. Проверить наличие сезонной перегрузки питающей линии, трансформаторной подстанции, коммутационного оборудования и защит.\n5. Сообщить, были ли указанные события аварийными, плановыми, связанными с погодными условиями, повреждением линии, срабатыванием защиты, перегрузкой или иными обстоятельствами.\n6. Сообщить план технических мероприятий, сроки и ответственное подразделение.\n7. Если сети не находятся в зоне ответственности ПАО «Россети Московский регион», прошу переадресовать обращение компетентной организации и сообщить мне ответственного владельца сетей.\n\nПрошу дать ответ по существу, без общей формулировки о технологическом нарушении.\n\nДата: ${date}\n${user.fullName}`,
+
+          mosenergosbyt: `В АО «Мосэнергосбыт»\n\n${from}\n\nПретензия по качеству электроснабжения\n\n${baseIntro}\n\n${facts}\n\nПрошу:\n1. Зарегистрировать претензию и сообщить номер.\n2. Сообщить, какая сетевая организация обеспечивает передачу электрической энергии до моего адреса.\n3. Направить запрос в сетевую организацию о причинах повторяющихся отключений.\n4. Разъяснить порядок фиксации нарушения качества электроснабжения и порядок перерасчёта при превышении допустимой продолжительности перерыва.\n5. Сообщить, какие действия АО «Мосэнергосбыт» как гарантирующий поставщик предпримет для урегулирования ситуации с сетевой организацией.\n\nПрошу рассматривать обращение как претензию по повторяющейся проблеме, а не как единичное аварийное событие.\n\nДата: ${date}\n${user.fullName}`,
+
+          dobrodel: `В Министерство энергетики Московской области / через портал «Добродел»\n\n${from}\n\nОбращение\n\n${baseIntro}\n\n${facts}\n\nПрошу:\n1. Взять ситуацию с электроснабжением села Душоново на контроль.\n2. Установить ответственную сетевую организацию и сетевые объекты, питающие село.\n3. Запросить у сетевой организации причины повторяющихся отключений.\n4. Организовать проверку достаточности мощности и наличия сезонной перегрузки сетевого оборудования.\n5. Рассмотреть вопрос о включении необходимых работ в ремонтную или инвестиционную программу.\n6. Сообщить жителям конкретные технические меры, сроки и ответственных лиц.\n\nПрошу рассматривать проблему как повторяющуюся сезонную ситуацию, затрагивающую нормальные условия жизни жителей населённого пункта.\n\nДата: ${date}\n${user.fullName}`,
+
+          administration: `Главе городского округа Щёлково / в администрацию городского округа Щёлково\n\n${from}\n\nОбращение\n\n${baseIntro}\n\n${facts}\n\nПрошу администрацию:\n1. Направить официальный запрос в ответственную сетевую организацию о причинах повторяющихся отключений.\n2. Установить, какая организация отвечает за питающую линию, трансформаторную подстанцию и иное оборудование, обеспечивающее электроснабжение села Душоново.\n3. Инициировать проверку достаточности мощности и технического состояния сетей.\n4. Запросить у сетевой организации план мероприятий по устранению причин отключений.\n5. Взять вопрос на контроль администрации.\n6. Рассмотреть возможность проведения встречи жителей, администрации и представителей сетевой организации.\n\nПрошу дать письменный ответ по существу.\n\nДата: ${date}\n${user.fullName}`,
+
+          rostekhnadzor: `В Ростехнадзор\n\n${from}\n\nЗаявление\n\n${baseIntro}\n\n${facts}\n\nПрошу в пределах компетенции Ростехнадзора:\n1. Установить ответственную сетевую организацию и сетевые объекты, обеспечивающие электроснабжение села Душоново.\n2. Проверить соблюдение обязательных требований к эксплуатации электросетевого оборудования.\n3. Проверить техническое состояние питающей линии, трансформаторной подстанции, коммутационной аппаратуры и защит.\n4. Проверить наличие сезонной перегрузки оборудования.\n5. При наличии нарушений принять меры реагирования и сообщить о результатах проверки.\n\nДата: ${date}\n${user.fullName}`,
+
+          rospotrebnadzor: `В Управление Роспотребнадзора по Московской области\n\n${from}\n\nЗаявление\n\n${baseIntro}\n\n${facts}\n\nПрошу:\n1. Проверить соблюдение прав потребителей при предоставлении услуги электроснабжения.\n2. Проверить соблюдение требований к качеству и бесперебойности коммунальной услуги.\n3. Разъяснить порядок фиксации нарушения качества услуги и получения перерасчёта.\n4. При наличии оснований принять меры реагирования к ответственным лицам.\n5. Сообщить, какая организация должна составить акт нарушения качества электроснабжения.\n\nДата: ${date}\n${user.fullName}`,
+
+          prosecutor: `В прокуратуру Московской области\n\n${from}\n\nЗаявление\n\n${baseIntro}\n\n${facts}\n\nПрошу провести прокурорскую проверку по факту повторяющихся отключений электроэнергии и эпизодов некачественного электроснабжения в селе Душоново городского округа Щёлково Московской области.\n\nПрошу:\n1. Проверить соблюдение законодательства об электроэнергетике и прав потребителей при электроснабжении села Душоново.\n2. Установить ответственную сетевую организацию.\n3. Проверить действия или бездействие сетевой организации, гарантирующего поставщика и органов власти.\n4. При наличии оснований принять меры прокурорского реагирования.\n5. Обязать ответственных лиц установить причины повторяющихся отключений и представить конкретный план устранения проблемы.\n\nДата: ${date}\n${user.fullName}`,
+
+          fas: `В ФАС России / Московское областное УФАС\n\n${from}\n\nЗаявление\n\n${baseIntro}\n\n${facts}\n\nПрошу рассмотреть ситуацию в пределах компетенции антимонопольного органа и оценить действия ответственной сетевой организации, если в них имеются признаки злоупотребления положением, дискриминационного поведения, уклонения от необходимых мероприятий по обеспечению надёжности электроснабжения или иных нарушений.\n\nЕсли вопрос не относится к компетенции ФАС, прошу переадресовать обращение в компетентный орган и сообщить мне об этом.\n\nДата: ${date}\n${user.fullName}`
+        };
+        return templates[agencyId] || `В ${agency ? agency.name : "ведомство"}\n\n${from}\n\nОбращение\n\n${baseIntro}\n\n${facts}\n\nПрошу проверить ситуацию и сообщить ответ по существу.\n\nДата: ${date}\n${user.fullName}`;
+      }
+
+      function openAppealDialog(agencyId) {
+        if (!validateUserData()) { go("data"); return; }
+        saveUserData();
+        const agency = agencyById(agencyId);
+        activeAgencyId = agencyId;
+        lastAppealText = generateAppeal(agencyId, getUserData());
+        $("dialogTitle").textContent = agency ? `Текст: ${agency.name}` : "Текст обращения";
+        $("appealText").textContent = lastAppealText;
+        $("appealDialog").showModal();
+      }
+
+      async function copyText(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch (e) {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+      }
+
+      function copyAppeal(agencyId) {
+        if (!validateUserData()) { go("data"); return; }
+        const text = generateAppeal(agencyId, getUserData());
+        copyText(text).then(() => showNotice("Текст скопирован. Теперь откройте сайт ведомства, вставьте текст и отправьте обращение от своего имени."));
+      }
+
+      function openAgencySite(agencyId) {
+        const agency = agencyById(agencyId);
+        if (!agency || !agency.officialUrl) {
+          showNotice("Ссылка на ведомство не указана в настройках сайта.");
+          return;
+        }
+        window.open(agency.officialUrl, "_blank", "noopener,noreferrer");
+        showNotice("После отправки вернитесь сюда и нажмите «Я отправил». Нужен номер обращения или скрин.");
+      }
+
+      function addParam(params, key, value) {
+        if (!key || value === undefined || value === null || String(value).trim() === "") return;
+        params.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+      }
+
+      function makeFormUrl(actionKey, agencyId) {
+        const user = getUserData();
+        const fields = config.formFields || {};
+        const answerIds = config.formAnswerIds || {};
+        const actionIds = answerIds.actionType || {};
+        const agencyIds = answerIds.agency || {};
+        const actionValue = actionKey === "receivedAnswer" ? actionIds.receivedAnswer : actionKey === "failed" ? actionIds.failed : actionIds.sent;
+        const agencyValue = agencyIds[agencyId] || "";
+        const params = [];
+        addParam(params, fields.actionType, actionValue);
+        addParam(params, fields.agency, agencyValue);
+        addParam(params, fields.fullName, user.fullName);
+        addParam(params, fields.phone, user.phone);
+        addParam(params, fields.email, user.email);
+        addParam(params, fields.address, user.address);
+        addParam(params, fields.eventDate, todayRu());
+        const agency = agencyById(agencyId);
+        const agencyText = agency ? agency.name : "";
+        const comment = actionKey === "receivedAnswer"
+          ? `Загрузка ответа ведомства${agencyText ? ": " + agencyText : ""}. Прикрепите PDF, фото или скрин.`
+          : actionKey === "failed"
+            ? `Не получилось отправить обращение${agencyText ? ": " + agencyText : ""}. Опишите проблему.`
+            : `Подтверждение отправки обращения${agencyText ? ": " + agencyText : ""}. Внесите номер обращения или загрузите скрин.`;
+        addParam(params, fields.comment, comment);
+        const base = config.formUrl || "";
+        if (!base) {
+          showNotice("Ссылка на Яндекс.Форму не указана в config.js.");
+          return "";
+        }
+        return base + (base.includes("?") ? "&" : "?") + params.join("&");
+      }
+
+      function openTrackForm(actionKey, agencyId) {
+        if (!validateUserData()) { go("data"); return; }
+        saveUserData();
+        const url = makeFormUrl(actionKey, agencyId || "other");
+        if (!url) return;
+        window.open(url, "_blank", "noopener,noreferrer");
+        if (actionKey === "sent") showNotice("В форме внесите номер обращения или загрузите скрин отправки.");
+        if (actionKey === "receivedAnswer") showNotice("В форме прикрепите PDF, фото или скрин ответа ведомства.");
+      }
+
+      function renderAgencies() {
+        const buckets = { first: $("firstWave"), second: $("secondWave"), extra: $("extraWave") };
+        Object.values(buckets).forEach((el) => { if (el) el.innerHTML = ""; });
+        (config.agencies || []).forEach((agency) => {
+          const card = document.createElement("div");
+          card.className = `card agency-card ${waveClass(agency.wave)}`;
+          card.innerHTML = `
+            <span class="badge">${waveLabel(agency.wave)}</span>
+            <h3>${escapeHtml(agency.name)}</h3>
+            <p>${escapeHtml(agency.purpose || "")}</p>
+            ${agency.urlHint ? `<p class="muted small">${escapeHtml(agency.urlHint)}</p>` : ""}
+            <div class="actions">
+              <button type="button" data-action="show" data-agency="${agency.id}">Показать текст</button>
+              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Скопировать текст</button>
+              <button type="button" class="secondary" data-action="site" data-agency="${agency.id}">Открыть сайт ведомства</button>
+              <button type="button" class="ok" data-action="sent" data-agency="${agency.id}">Я отправил</button>
+              <button type="button" class="ghost" data-action="answer" data-agency="${agency.id}">Получил ответ</button>
+            </div>
+          `;
+          const target = buckets[agency.wave] || buckets.extra;
+          target.appendChild(card);
+        });
+      }
+
+      function renderOutages() {
+        const list = $("outageList");
+        if (!outages.length) {
+          list.innerHTML = `<p class="muted">Журнал отключений пока не загружен.</p>`;
+          return;
+        }
+        const sorted = outages.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+        list.innerHTML = sorted.map((o) => `
+          <div class="outage">
+            <strong>${escapeHtml(o.dateRu || o.date || "дата не указана")}: ${escapeHtml(o.start || "начало не установлено")} — ${escapeHtml(o.end || "окончание не установлено")}</strong>
+            <span>Длительность: ${escapeHtml(o.duration || "не установлено")}</span>
+            <span>Уверенность: ${escapeHtml(o.confidence || "не указана")}</span>
+            <span class="muted small">${escapeHtml(o.notes || "")}</span>
+          </div>
+        `).join("");
+      }
+
+      function renderStats() {
+        const stats = config.stats || {};
+        $("statsBox").innerHTML = `
+          <div class="grid two">
+            <div class="card"><h3>${escapeHtml(String(stats.participants || 0))}</h3><p>участников</p></div>
+            <div class="card"><h3>${escapeHtml(String(stats.confirmedAppeals || 0))}</h3><p>подтверждённых отправок</p></div>
+            <div class="card"><h3>${escapeHtml(String(stats.receivedAnswers || 0))}</h3><p>получено ответов</p></div>
+            <div class="card"><h3>${escapeHtml(String(stats.lastUpdated || "не обновлялось"))}</h3><p>последнее обновление</p></div>
+          </div>
+        `;
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>'"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[ch]));
+      }
+
+      document.addEventListener("click", (event) => {
+        const goBtn = event.target.closest("[data-go]");
+        if (goBtn) go(goBtn.getAttribute("data-go"));
+        const actionBtn = event.target.closest("[data-action]");
+        if (!actionBtn) return;
+        const action = actionBtn.getAttribute("data-action");
+        const agencyId = actionBtn.getAttribute("data-agency");
+        if (action === "show") openAppealDialog(agencyId);
+        if (action === "copy") copyAppeal(agencyId);
+        if (action === "site") openAgencySite(agencyId);
+        if (action === "sent") openTrackForm("sent", agencyId);
+        if (action === "answer") openTrackForm("receivedAnswer", agencyId);
+      });
+
+      $("saveDataBtn").addEventListener("click", saveUserData);
+      $("makeAppealsBtn").addEventListener("click", () => {
+        if (!validateUserData()) return;
+        saveUserData();
+        renderAgencies();
+        go("appeals");
+      });
+      $("clearDataBtn").addEventListener("click", clearUserData);
+      $("quickAnswerBtn").addEventListener("click", () => openTrackForm("receivedAnswer", "other"));
+      $("closeDialogBtn").addEventListener("click", () => $("appealDialog").close());
+      $("closeDialogBtn2").addEventListener("click", () => $("appealDialog").close());
+      $("copyDialogBtn").addEventListener("click", () => {
+        copyText(lastAppealText).then(() => showNotice("Текст скопирован. Теперь откройте сайт ведомства и вставьте его в поле обращения."));
+      });
+
+      loadUserData();
+      renderAgencies();
+      renderOutages();
+      renderStats();
+
+      if (!config.formUrl || (config.formUrl || "").includes("ВСТАВИТЬ")) {
+        showNotice("Администратору: не заполнена ссылка на Яндекс.Форму в config.js.");
+      }
+    })();
+  </script>
+</body>
+</html>
