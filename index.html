@@ -298,15 +298,17 @@
     </div>
     <div class="dialog-body">
       <div class="copy-mode">
-        <button class="mode active" id="dialogModeShort" type="button">Короткий текст для формы</button>
+        <button class="mode active" id="dialogModeTiny" type="button">Сверхкороткий текст</button>
+        <button class="mode" id="dialogModeShort" type="button">Короткий текст</button>
         <button class="mode" id="dialogModeFull" type="button">Полный текст с журналом</button>
       </div>
       <textarea id="appealText" class="mono appeal-textarea" readonly spellcheck="false"></textarea>
-      <p class="small muted">Для сайтов ведомств используйте короткую версию. Полный текст с журналом оставлен на случай, если поле формы принимает длинные обращения.</p>
+      <p class="small muted">Для капризных форм используйте сверхкороткую версию: один абзац без пустых строк. Если форма принимает длинный текст, можно переключиться на короткую или полную версию.</p>
     </div>
     <div class="dialog-actions">
       <button id="copyDialogBtn" type="button">Скопировать весь текст</button>
       <button class="secondary" id="selectDialogTextBtn" type="button">Выделить весь текст</button>
+      <button class="secondary" id="downloadDialogTextBtn" type="button">Скачать .txt</button>
       <button class="secondary" id="closeDialogBtn2" type="button">Закрыть</button>
     </div>
   </dialog>
@@ -340,7 +342,7 @@
       const storageKey = "dushonovo_light_user_v1";
       let activeAgencyId = null;
       let lastAppealText = "";
-      let lastAppealMode = "short";
+      let lastAppealMode = "tiny";
 
       const $ = (id) => document.getElementById(id);
       const sections = Array.from(document.querySelectorAll(".section"));
@@ -488,6 +490,32 @@
           .join("\n");
       }
 
+      function compactParagraph(text) {
+        return String(text || "")
+          .replace(/\s+/g, " ")
+          .replace(/\s+([,.;:!?])/g, "$1")
+          .trim();
+      }
+
+      function generateAppealTiny(agencyId, user) {
+        const agency = agencyById(agencyId);
+        const date = todayRu();
+        const base = `Я, ${user.fullName}, прошу проверить повторяющиеся отключения электроэнергии и эпизоды некачественного электроснабжения по адресу: ${user.address}, село Душоново, городской округ Щёлково Московской области. По гражданскому журналу жителей, составленному по сообщениям сельского Telegram-чата, проблема носит повторяющийся характер. Прошу проверить сведения по официальным аварийным, диспетчерским и эксплуатационным журналам.`;
+
+        const asks = {
+          rosseti: "Прошу установить питающую линию, ТП, фидер и ответственное подразделение, проверить причины отключений и наличие сезонной перегрузки, сообщить план мероприятий и сроки устранения проблемы.",
+          mosenergosbyt: "Прошу зарегистрировать претензию по качеству электроснабжения, запросить у сетевой организации причины отключений, сообщить ответственную сетевую организацию и порядок фиксации нарушения качества услуги.",
+          dobrodel: "Прошу взять ситуацию на контроль, запросить у сетевой организации причины повторяющихся отключений, проверить достаточность мощности сетей и сообщить план технических мероприятий со сроками.",
+          administration: "Прошу администрацию направить официальный запрос в сетевую организацию, установить ответственных за питающие сети села Душоново, взять вопрос на контроль и сообщить жителям план мероприятий и сроки.",
+          rostekhnadzor: "Прошу проверить техническое состояние питающей линии, трансформаторной подстанции, коммутационного оборудования и защит, а также наличие сезонной перегрузки сетевого оборудования.",
+          rospotrebnadzor: "Прошу проверить соблюдение прав потребителей и требований к качеству коммунальной услуги электроснабжения, а также разъяснить порядок фиксации нарушения и перерасчёта.",
+          prosecutor: "Прошу провести проверку соблюдения законодательства об электроэнергетике и прав потребителей, установить ответственную сетевую организацию и оценить действия или бездействие ответственных лиц.",
+          fas: "Прошу рассмотреть ситуацию в пределах компетенции антимонопольного органа, если в действиях ответственной сетевой организации имеются признаки злоупотребления положением или уклонения от необходимых мероприятий."
+        };
+
+        return compactParagraph(`${agency ? agency.name + ". " : ""}${base} ${asks[agencyId] || "Прошу проверить ситуацию и дать письменный ответ по существу."} Дата: ${date}.`);
+      }
+
       function generateAppealShort(agencyId, user) {
         const agency = agencyById(agencyId);
         const from = userBlock(user);
@@ -546,11 +574,13 @@
       }
 
       function setDialogMode(mode) {
-        lastAppealMode = mode === "full" ? "full" : "short";
+        lastAppealMode = mode === "full" ? "full" : (mode === "short" ? "short" : "tiny");
 
+        const tinyBtn = $("dialogModeTiny");
         const shortBtn = $("dialogModeShort");
         const fullBtn = $("dialogModeFull");
-        if (shortBtn && fullBtn) {
+        if (tinyBtn && shortBtn && fullBtn) {
+          tinyBtn.classList.toggle("active", lastAppealMode === "tiny");
           shortBtn.classList.toggle("active", lastAppealMode === "short");
           fullBtn.classList.toggle("active", lastAppealMode === "full");
         }
@@ -558,9 +588,13 @@
         if (!activeAgencyId) return;
 
         const user = getUserData();
-        lastAppealText = lastAppealMode === "full"
-          ? generateAppeal(activeAgencyId, user)
-          : generateAppealShort(activeAgencyId, user);
+        if (lastAppealMode === "full") {
+          lastAppealText = generateAppeal(activeAgencyId, user);
+        } else if (lastAppealMode === "short") {
+          lastAppealText = generateAppealShort(activeAgencyId, user);
+        } else {
+          lastAppealText = generateAppealTiny(activeAgencyId, user);
+        }
 
         const textBox = $("appealText");
         textBox.value = lastAppealText;
@@ -574,7 +608,7 @@
         const agency = agencyById(agencyId);
         activeAgencyId = agencyId;
         $("dialogTitle").textContent = agency ? `Текст: ${agency.name}` : "Текст обращения";
-        setDialogMode(mode || "short");
+        setDialogMode(mode || "tiny");
         $("appealDialog").showModal();
       }
 
@@ -622,12 +656,12 @@
       function copyAppeal(agencyId) {
         if (!validateUserData()) { go("data"); return; }
         saveUserData();
-        const text = generateAppealShort(agencyId, getUserData());
+        const text = generateAppealTiny(agencyId, getUserData());
         copyText(text)
-          .then(() => showNotice(`Короткий текст для формы скопирован: ${text.length} знаков. Вставьте его в поле обращения.`))
+          .then(() => showNotice(`Сверхкороткий текст скопирован: ${text.length} знаков. Вставьте его в поле обращения.`))
           .catch(() => {
-            openAppealDialog(agencyId, "short");
-            showNotice("Автокопирование не сработало. Открыл короткий текст: нажмите «Выделить весь текст» и скопируйте вручную.");
+            openAppealDialog(agencyId, "tiny");
+            showNotice("Автокопирование не сработало. Открыл сверхкороткий текст: нажмите «Выделить весь текст» и скопируйте вручную.");
           });
       }
 
@@ -701,7 +735,7 @@
             ${agency.urlHint ? `<p class="muted small">${escapeHtml(agency.urlHint)}</p>` : ""}
             <div class="actions">
               <button type="button" data-action="show" data-agency="${agency.id}">Показать текст</button>
-              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Скопировать короткий текст</button>
+              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Скопировать сверхкороткий текст</button>
               <button type="button" class="secondary" data-action="site" data-agency="${agency.id}">Открыть сайт ведомства</button>
               <button type="button" class="ok" data-action="sent" data-agency="${agency.id}">Я отправил</button>
               <button type="button" class="ghost" data-action="answer" data-agency="${agency.id}">Получил ответ</button>
@@ -770,6 +804,7 @@
       $("quickAnswerBtn").addEventListener("click", () => openTrackForm("receivedAnswer", "other"));
       $("closeDialogBtn").addEventListener("click", () => $("appealDialog").close());
       $("closeDialogBtn2").addEventListener("click", () => $("appealDialog").close());
+      $("dialogModeTiny").addEventListener("click", () => setDialogMode("tiny"));
       $("dialogModeShort").addEventListener("click", () => setDialogMode("short"));
       $("dialogModeFull").addEventListener("click", () => setDialogMode("full"));
 
@@ -793,6 +828,21 @@
         textBox.select();
         textBox.setSelectionRange(0, textBox.value.length);
         showNotice(`Выделен весь текст: ${textBox.value.length} знаков. Теперь нажмите Ctrl+C или «Копировать» на телефоне.`);
+      });
+
+      $("downloadDialogTextBtn").addEventListener("click", () => {
+        const textBox = $("appealText");
+        const blob = new Blob([textBox.value || lastAppealText || ""], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const agency = agencyById(activeAgencyId);
+        a.href = url;
+        a.download = `obrashchenie-dushonovo-${agency ? agency.id : "text"}-${lastAppealMode}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showNotice("Файл с текстом обращения скачан. Его можно приложить к форме, если сайт ведомства режет вставку.");
       });
 
       const thanksText = [
