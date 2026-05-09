@@ -640,6 +640,40 @@
         copyText(lastAppealText).then(() => showNotice("Текст скопирован. Теперь откройте сайт ведомства и вставьте его в поле обращения."));
       });
 
+      const thanksText = [
+        "Ребята, я правда повозился, чтобы этот помощник заработал.",
+        "",
+        "Если сайт оказался полезным и хочется поддержать по-соседски — можно заглянуть на Ozon в наш родной, душоновский Жарсоус.",
+        "",
+        "Там много вкусов. Может, что-то подойдёт к вашему столу.",
+        "",
+        "Это, конечно, не обязанность. Главное — чтобы со светом наконец разобрались."
+      ].join("\n");
+
+      $("thanksBtn").addEventListener("click", () => {
+        const dialog = $("thanksDialog");
+
+        if (dialog && typeof dialog.showModal === "function") {
+          dialog.showModal();
+          return;
+        }
+
+        window.alert(thanksText);
+      });
+
+      $("closeThanksBtn").addEventListener("click", () => $("thanksDialog").close());
+      $("closeThanksBtn2").addEventListener("click", () => $("thanksDialog").close());
+      $("openThanksLinkBtn").addEventListener("click", () => {
+        const url = config.thanksUrl || "";
+
+        if (!url || url.includes("ВСТАВИТЬ")) {
+          showNotice("Ссылка на Жарсоус пока не указана в config.js.");
+          return;
+        }
+
+        window.open(url, "_blank", "noopener,noreferrer");
+      });
+
       loadUserData();
       renderAgencies();
       renderOutages();
