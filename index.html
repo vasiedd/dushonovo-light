@@ -303,10 +303,11 @@
         <button class="mode" id="dialogModeFull" type="button">Полный текст с журналом</button>
       </div>
       <textarea id="appealText" class="mono appeal-textarea" readonly spellcheck="false"></textarea>
+      <p class="warning small"><strong>Важно:</strong> после нажатия «Скопировать в буфер» сразу вставляйте текст в форму ведомства. Если вставился старый текст или мусор — нажмите «Выделить весь текст» и скопируйте вручную через Ctrl+C / меню телефона.</p>
       <p class="small muted">Для капризных форм используйте сверхкороткую версию: один абзац без пустых строк. Если форма принимает длинный текст, можно переключиться на короткую или полную версию.</p>
     </div>
     <div class="dialog-actions">
-      <button id="copyDialogBtn" type="button">Скопировать весь текст</button>
+      <button id="copyDialogBtn" type="button">Скопировать в буфер</button>
       <button class="secondary" id="selectDialogTextBtn" type="button">Выделить весь текст</button>
       <button class="secondary" id="downloadDialogTextBtn" type="button">Скачать .txt</button>
       <button class="secondary" id="closeDialogBtn2" type="button">Закрыть</button>
@@ -622,6 +623,20 @@
         if (navigator.clipboard && window.isSecureContext) {
           try {
             await navigator.clipboard.writeText(value);
+
+            if (navigator.clipboard.readText) {
+              try {
+                const current = await navigator.clipboard.readText();
+                if (current !== value) {
+                  throw new Error("В буфере остался другой текст");
+                }
+              } catch (verifyError) {
+                if (String(verifyError && verifyError.message || "").includes("другой текст")) {
+                  throw verifyError;
+                }
+              }
+            }
+
             return true;
           } catch (e) {
             // Ниже fallback для браузеров/страниц, где Clipboard API капризничает.
@@ -656,13 +671,14 @@
       function copyAppeal(agencyId) {
         if (!validateUserData()) { go("data"); return; }
         saveUserData();
-        const text = generateAppealTiny(agencyId, getUserData());
-        copyText(text)
-          .then(() => showNotice(`Сверхкороткий текст скопирован: ${text.length} знаков. Вставьте его в поле обращения.`))
-          .catch(() => {
-            openAppealDialog(agencyId, "tiny");
-            showNotice("Автокопирование не сработало. Открыл сверхкороткий текст: нажмите «Выделить весь текст» и скопируйте вручную.");
-          });
+        openAppealDialog(agencyId, "tiny");
+        setTimeout(() => {
+          const textBox = $("appealText");
+          textBox.focus();
+          textBox.select();
+          textBox.setSelectionRange(0, textBox.value.length);
+          showNotice("Текст открыт и выделен. Нажмите «Скопировать в буфер», затем сразу вставляйте в форму ведомства.");
+        }, 80);
       }
 
       function openAgencySite(agencyId) {
@@ -735,7 +751,7 @@
             ${agency.urlHint ? `<p class="muted small">${escapeHtml(agency.urlHint)}</p>` : ""}
             <div class="actions">
               <button type="button" data-action="show" data-agency="${agency.id}">Показать текст</button>
-              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Скопировать сверхкороткий текст</button>
+              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Открыть и выделить текст</button>
               <button type="button" class="secondary" data-action="site" data-agency="${agency.id}">Открыть сайт ведомства</button>
               <button type="button" class="ok" data-action="sent" data-agency="${agency.id}">Я отправил</button>
               <button type="button" class="ghost" data-action="answer" data-agency="${agency.id}">Получил ответ</button>
@@ -813,12 +829,17 @@
         const text = textBox.value || lastAppealText || "";
 
         copyText(text)
-          .then(() => showNotice(`Весь текст скопирован: ${text.length} знаков. Теперь вставьте его в поле обращения.`))
+          .then(() => {
+            textBox.focus();
+            textBox.select();
+            textBox.setSelectionRange(0, textBox.value.length);
+            showNotice(`В буфер отправлено: ${text.length} знаков. Если в форме вставится не это — текст уже выделен, скопируйте вручную.`);
+          })
           .catch(() => {
             textBox.focus();
             textBox.select();
             textBox.setSelectionRange(0, textBox.value.length);
-            showNotice("Автокопирование не сработало. Текст выделен — скопируйте его вручную.");
+            showNotice("Автокопирование не сработало. Текст выделен — скопируйте вручную через Ctrl+C или меню телефона.");
           });
       });
 
