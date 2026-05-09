@@ -278,10 +278,12 @@
       <button class="secondary" id="closeDialogBtn" type="button">Закрыть</button>
     </div>
     <div class="dialog-body">
-      <pre id="appealText" class="mono"></pre>
+      <textarea id="appealText" class="mono appeal-textarea" readonly spellcheck="false"></textarea>
+      <p class="small muted">Если на сайте ведомства вставилась только часть текста, нажмите «Выделить весь текст», скопируйте вручную и вставьте снова.</p>
     </div>
     <div class="dialog-actions">
-      <button id="copyDialogBtn">Скопировать</button>
+      <button id="copyDialogBtn" type="button">Скопировать весь текст</button>
+      <button class="secondary" id="selectDialogTextBtn" type="button">Выделить весь текст</button>
       <button class="secondary" id="closeDialogBtn2" type="button">Закрыть</button>
     </div>
   </dialog>
@@ -476,27 +478,63 @@
         activeAgencyId = agencyId;
         lastAppealText = generateAppeal(agencyId, getUserData());
         $("dialogTitle").textContent = agency ? `Текст: ${agency.name}` : "Текст обращения";
-        $("appealText").textContent = lastAppealText;
+        const textBox = $("appealText");
+        textBox.value = lastAppealText;
+        textBox.textContent = lastAppealText;
         $("appealDialog").showModal();
+        setTimeout(() => { textBox.scrollTop = 0; }, 0);
       }
 
       async function copyText(text) {
-        try {
-          await navigator.clipboard.writeText(text);
-        } catch (e) {
-          const ta = document.createElement("textarea");
-          ta.value = text;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          ta.remove();
+        const value = String(text || "");
+
+        if (!value.trim()) {
+          throw new Error("Пустой текст для копирования");
         }
+
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(value);
+            return true;
+          } catch (e) {
+            // Ниже fallback для браузеров/страниц, где Clipboard API капризничает.
+          }
+        }
+
+        const ta = document.createElement("textarea");
+        ta.value = value;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        ta.style.width = "1px";
+        ta.style.height = "1px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+
+        const ok = document.execCommand("copy");
+        ta.remove();
+
+        if (!ok) {
+          throw new Error("Браузер не дал скопировать текст автоматически");
+        }
+
+        return true;
       }
 
       function copyAppeal(agencyId) {
         if (!validateUserData()) { go("data"); return; }
         const text = generateAppeal(agencyId, getUserData());
-        copyText(text).then(() => showNotice("Текст скопирован. Теперь откройте сайт ведомства, вставьте текст и отправьте обращение от своего имени."));
+        copyText(text)
+          .then(() => showNotice("Весь текст скопирован. Теперь откройте сайт ведомства, вставьте текст и отправьте обращение от своего имени."))
+          .catch(() => {
+            openAppealDialog(agencyId);
+            showNotice("Автокопирование не сработало. Открыл текст: нажмите «Выделить весь текст» и скопируйте вручную.");
+          });
       }
 
       function openAgencySite(agencyId) {
@@ -639,7 +677,25 @@
       $("closeDialogBtn").addEventListener("click", () => $("appealDialog").close());
       $("closeDialogBtn2").addEventListener("click", () => $("appealDialog").close());
       $("copyDialogBtn").addEventListener("click", () => {
-        copyText(lastAppealText).then(() => showNotice("Текст скопирован. Теперь откройте сайт ведомства и вставьте его в поле обращения."));
+        const textBox = $("appealText");
+        const text = textBox.value || lastAppealText || "";
+
+        copyText(text)
+          .then(() => showNotice(`Весь текст скопирован: ${text.length} знаков. Теперь вставьте его в поле обращения.`))
+          .catch(() => {
+            textBox.focus();
+            textBox.select();
+            textBox.setSelectionRange(0, textBox.value.length);
+            showNotice("Автокопирование не сработало. Текст выделен — скопируйте его вручную.");
+          });
+      });
+
+      $("selectDialogTextBtn").addEventListener("click", () => {
+        const textBox = $("appealText");
+        textBox.focus();
+        textBox.select();
+        textBox.setSelectionRange(0, textBox.value.length);
+        showNotice(`Выделен весь текст: ${textBox.value.length} знаков. Теперь нажмите Ctrl+C или «Копировать» на телефоне.`);
       });
 
       const thanksText = [
