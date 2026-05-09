@@ -8,17 +8,17 @@
   <script src="outages.js"></script>
   <style>
     :root {
-      --bg: #f5f5f2;
+      --bg: #fff7cf;
       --card: #ffffff;
-      --text: #1f2933;
-      --muted: #667085;
-      --border: #d9dee7;
-      --accent: #2344c4;
-      --accent-dark: #18318f;
-      --danger: #a53232;
+      --text: #231f20;
+      --muted: #6b4b00;
+      --border: #f0c44a;
+      --accent: #d71920;
+      --accent-dark: #a90f16;
+      --danger: #a90f16;
       --ok: #19703a;
-      --soft: #eef2ff;
-      --shadow: 0 10px 30px rgba(16, 24, 40, .08);
+      --soft: #fff1a6;
+      --shadow: 0 10px 30px rgba(120, 36, 0, .12);
     }
 
     * { box-sizing: border-box; }
@@ -32,8 +32,9 @@
     }
     .wrap { max-width: 980px; margin: 0 auto; padding: 18px 14px 56px; }
     header {
-      background: linear-gradient(135deg, #111827, #26346c);
-      color: #fff;
+      background: linear-gradient(135deg, #ffd400 0%, #ffb800 42%, #d71920 100%);
+      color: #3a0808;
+      border: 2px solid #d71920;
       border-radius: 22px;
       padding: 24px 18px;
       box-shadow: var(--shadow);
@@ -43,7 +44,7 @@
     h2 { font-size: 24px; margin: 0 0 12px; }
     h3 { font-size: 19px; margin: 0 0 8px; }
     p { margin: 0 0 12px; }
-    .lead { color: rgba(255,255,255,.88); font-size: 17px; max-width: 760px; }
+    .lead { color: #4a1700; font-size: 17px; max-width: 760px; font-weight: 600; }
     .section { display: none; }
     .section.active { display: block; }
     .card {
@@ -54,7 +55,7 @@
       margin: 14px 0;
       box-shadow: var(--shadow);
     }
-    .soft-card { background: var(--soft); border-color: #c7d2fe; }
+    .soft-card { background: var(--soft); border-color: #f0b400; }
     .muted { color: var(--muted); }
     .small { font-size: 14px; }
     .grid { display: grid; gap: 12px; }
@@ -130,6 +131,18 @@
     .notice { position: fixed; left: 14px; right: 14px; bottom: 14px; background: #111827; color: white; padding: 13px 14px; border-radius: 14px; box-shadow: var(--shadow); display: none; z-index: 20; }
     .notice.show { display: block; }
     details { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 12px 14px; margin: 12px 0; }
+
+    .thanks-footer {
+      margin: 18px 0 0;
+      padding: 14px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .thanks-footer p { margin-bottom: 10px; }
+    .thanks-note {
+      font-size: 16px;
+      line-height: 1.5;
+    }
     summary { cursor: pointer; font-weight: 800; font-size: 18px; }
 
     @media (max-width: 640px) {
@@ -146,7 +159,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Вернём нормальное электричество в Душоново</h1>
+      <h1><span aria-hidden="true">⚡</span> Вернём нормальное электричество в Душоново</h1>
       <p class="lead">Сайт подготовит тексты обращений. Отправляете вы сами через официальные сайты. Пароли не нужны.</p>
       <div class="actions">
         <button data-go="data">Подготовить обращения</button>
@@ -250,6 +263,11 @@
         <button class="secondary" data-go="home">На главную</button>
       </section>
     </main>
+
+    <div class="thanks-footer">
+      <p class="small">Сайт сделан для общего дела. Если хотите — можно сказать спасибо.</p>
+      <button class="ghost" id="thanksBtn" type="button">Сказать спасибо</button>
+    </div>
   </div>
 
   <dialog id="appealDialog">
@@ -263,6 +281,24 @@
     <div class="dialog-actions">
       <button id="copyDialogBtn">Скопировать</button>
       <button class="secondary" id="closeDialogBtn2" type="button">Закрыть</button>
+    </div>
+  </dialog>
+
+
+  <dialog id="thanksDialog">
+    <div class="dialog-head">
+      <strong>Сказать спасибо</strong>
+      <button class="secondary" id="closeThanksBtn" type="button">Закрыть</button>
+    </div>
+    <div class="dialog-body">
+      <p class="thanks-note">Ребята, я правда повозился, чтобы этот помощник заработал.</p>
+      <p class="thanks-note">Если сайт оказался полезным и хочется поддержать по-соседски — можно заглянуть на Ozon в наш родной, душоновский Жарсоус.</p>
+      <p class="thanks-note">Там много вкусов. Может, что-то подойдёт к вашему столу.</p>
+      <p class="thanks-note">Это, конечно, не обязанность. Главное — чтобы со светом наконец разобрались.</p>
+    </div>
+    <div class="dialog-actions">
+      <button id="openThanksLinkBtn" type="button">Посмотреть Жарсоус на Ozon</button>
+      <button class="secondary" id="closeThanksBtn2" type="button">Закрыть</button>
     </div>
   </dialog>
 

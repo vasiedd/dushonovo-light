@@ -5,6 +5,7 @@
 
 window.APP_CONFIG = {
   campaignName: "Душоново: электричество",
+  thanksUrl: "https://ozon.ru/s/zharsous",
   formUrl: "https://forms.yandex.ru/u/69fe6f879029026437ab8973/",
   formFields: {
     actionType: "answer_one_answer_9008977537392610",
