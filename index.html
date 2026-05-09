@@ -298,18 +298,20 @@
     </div>
     <div class="dialog-body">
       <div class="copy-mode">
-        <button class="mode active" id="dialogModeTiny" type="button">Сверхкороткий текст</button>
+        <button class="mode active" id="dialogModeMicro" type="button">Для кривых форм</button>
+        <button class="mode" id="dialogModeTiny" type="button">Сверхкороткий текст</button>
         <button class="mode" id="dialogModeShort" type="button">Короткий текст</button>
         <button class="mode" id="dialogModeFull" type="button">Полный текст с журналом</button>
       </div>
       <textarea id="appealText" class="mono appeal-textarea" readonly spellcheck="false"></textarea>
-      <p class="warning small"><strong>Важно:</strong> после нажатия «Скопировать в буфер» сразу вставляйте текст в форму ведомства. Если вставился старый текст или мусор — нажмите «Выделить весь текст» и скопируйте вручную через Ctrl+C / меню телефона.</p>
-      <p class="small muted">Для капризных форм используйте сверхкороткую версию: один абзац без пустых строк. Если форма принимает длинный текст, можно переключиться на короткую или полную версию.</p>
+      <p class="warning small"><strong>Если форма режет текст:</strong> используйте режим «Для кривых форм», а полный текст скачайте кнопкой «Скачать полный .txt» и приложите файлом.</p>
+      <p class="small muted">Некоторые официальные формы вставляют только первые 150–250 символов. Поэтому главный смысл теперь стоит в самом начале текста.</p>
     </div>
     <div class="dialog-actions">
       <button id="copyDialogBtn" type="button">Скопировать в буфер</button>
       <button class="secondary" id="selectDialogTextBtn" type="button">Выделить весь текст</button>
-      <button class="secondary" id="downloadDialogTextBtn" type="button">Скачать .txt</button>
+      <button class="secondary" id="downloadDialogTextBtn" type="button">Скачать текущий .txt</button>
+      <button class="secondary" id="downloadFullTextBtn" type="button">Скачать полный .txt</button>
       <button class="secondary" id="closeDialogBtn2" type="button">Закрыть</button>
     </div>
   </dialog>
@@ -343,7 +345,7 @@
       const storageKey = "dushonovo_light_user_v1";
       let activeAgencyId = null;
       let lastAppealText = "";
-      let lastAppealMode = "tiny";
+      let lastAppealMode = "micro";
 
       const $ = (id) => document.getElementById(id);
       const sections = Array.from(document.querySelectorAll(".section"));
@@ -498,6 +500,14 @@
           .trim();
       }
 
+      function generateAppealMicro(agencyId, user) {
+        const agency = agencyById(agencyId);
+        const agencyPrefix = agency ? agency.name + ". " : "";
+        const address = user.address ? ` Адрес: ${user.address}.` : "";
+        const text = `${agencyPrefix}Прошу проверить регулярные отключения электричества в с. Душоново г.о. Щёлково, установить причины, ответственных и сроки устранения. Полный текст обращения прикрепляю файлом.${address}`;
+        return compactParagraph(text);
+      }
+
       function generateAppealTiny(agencyId, user) {
         const agency = agencyById(agencyId);
         const date = todayRu();
@@ -575,12 +585,14 @@
       }
 
       function setDialogMode(mode) {
-        lastAppealMode = mode === "full" ? "full" : (mode === "short" ? "short" : "tiny");
+        lastAppealMode = mode === "full" ? "full" : (mode === "short" ? "short" : (mode === "tiny" ? "tiny" : "micro"));
 
+        const microBtn = $("dialogModeMicro");
         const tinyBtn = $("dialogModeTiny");
         const shortBtn = $("dialogModeShort");
         const fullBtn = $("dialogModeFull");
-        if (tinyBtn && shortBtn && fullBtn) {
+        if (microBtn && tinyBtn && shortBtn && fullBtn) {
+          microBtn.classList.toggle("active", lastAppealMode === "micro");
           tinyBtn.classList.toggle("active", lastAppealMode === "tiny");
           shortBtn.classList.toggle("active", lastAppealMode === "short");
           fullBtn.classList.toggle("active", lastAppealMode === "full");
@@ -593,8 +605,10 @@
           lastAppealText = generateAppeal(activeAgencyId, user);
         } else if (lastAppealMode === "short") {
           lastAppealText = generateAppealShort(activeAgencyId, user);
-        } else {
+        } else if (lastAppealMode === "tiny") {
           lastAppealText = generateAppealTiny(activeAgencyId, user);
+        } else {
+          lastAppealText = generateAppealMicro(activeAgencyId, user);
         }
 
         const textBox = $("appealText");
@@ -609,7 +623,7 @@
         const agency = agencyById(agencyId);
         activeAgencyId = agencyId;
         $("dialogTitle").textContent = agency ? `Текст: ${agency.name}` : "Текст обращения";
-        setDialogMode(mode || "tiny");
+        setDialogMode(mode || "micro");
         $("appealDialog").showModal();
       }
 
@@ -671,13 +685,13 @@
       function copyAppeal(agencyId) {
         if (!validateUserData()) { go("data"); return; }
         saveUserData();
-        openAppealDialog(agencyId, "tiny");
+        openAppealDialog(agencyId, "micro");
         setTimeout(() => {
           const textBox = $("appealText");
           textBox.focus();
           textBox.select();
           textBox.setSelectionRange(0, textBox.value.length);
-          showNotice("Текст открыт и выделен. Нажмите «Скопировать в буфер», затем сразу вставляйте в форму ведомства.");
+          showNotice("Открыт режим для кривых форм. Скопируйте короткую строку, а полный текст скачайте .txt и приложите файлом.");
         }, 80);
       }
 
@@ -751,7 +765,7 @@
             ${agency.urlHint ? `<p class="muted small">${escapeHtml(agency.urlHint)}</p>` : ""}
             <div class="actions">
               <button type="button" data-action="show" data-agency="${agency.id}">Показать текст</button>
-              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Открыть и выделить текст</button>
+              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Открыть текст + скачать файл</button>
               <button type="button" class="secondary" data-action="site" data-agency="${agency.id}">Открыть сайт ведомства</button>
               <button type="button" class="ok" data-action="sent" data-agency="${agency.id}">Я отправил</button>
               <button type="button" class="ghost" data-action="answer" data-agency="${agency.id}">Получил ответ</button>
@@ -820,6 +834,7 @@
       $("quickAnswerBtn").addEventListener("click", () => openTrackForm("receivedAnswer", "other"));
       $("closeDialogBtn").addEventListener("click", () => $("appealDialog").close());
       $("closeDialogBtn2").addEventListener("click", () => $("appealDialog").close());
+      $("dialogModeMicro").addEventListener("click", () => setDialogMode("micro"));
       $("dialogModeTiny").addEventListener("click", () => setDialogMode("tiny"));
       $("dialogModeShort").addEventListener("click", () => setDialogMode("short"));
       $("dialogModeFull").addEventListener("click", () => setDialogMode("full"));
@@ -851,19 +866,30 @@
         showNotice(`Выделен весь текст: ${textBox.value.length} знаков. Теперь нажмите Ctrl+C или «Копировать» на телефоне.`);
       });
 
-      $("downloadDialogTextBtn").addEventListener("click", () => {
-        const textBox = $("appealText");
-        const blob = new Blob([textBox.value || lastAppealText || ""], { type: "text/plain;charset=utf-8" });
+      function downloadAppealFile(text, suffix) {
+        const blob = new Blob([text || ""], { type: "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         const agency = agencyById(activeAgencyId);
         a.href = url;
-        a.download = `obrashchenie-dushonovo-${agency ? agency.id : "text"}-${lastAppealMode}.txt`;
+        a.download = `obrashchenie-dushonovo-${agency ? agency.id : "text"}-${suffix}.txt`;
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-        showNotice("Файл с текстом обращения скачан. Его можно приложить к форме, если сайт ведомства режет вставку.");
+      }
+
+      $("downloadDialogTextBtn").addEventListener("click", () => {
+        const textBox = $("appealText");
+        downloadAppealFile(textBox.value || lastAppealText || "", lastAppealMode);
+        showNotice("Файл с текущим текстом скачан.");
+      });
+
+      $("downloadFullTextBtn").addEventListener("click", () => {
+        if (!activeAgencyId) return;
+        const full = generateAppeal(activeAgencyId, getUserData());
+        downloadAppealFile(full, "full");
+        showNotice("Полный текст обращения скачан. Его можно приложить файлом к форме ведомства.");
       });
 
       const thanksText = [
