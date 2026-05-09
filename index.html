@@ -144,6 +144,25 @@
       font-size: 16px;
       line-height: 1.5;
     }
+    .copy-mode {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    button.mode {
+      min-height: 40px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #fff3b0;
+      color: #8d0d12;
+      border: 1px solid #e3ad00;
+    }
+    button.mode.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
     summary { cursor: pointer; font-weight: 800; font-size: 18px; }
 
     @media (max-width: 640px) {
@@ -278,8 +297,12 @@
       <button class="secondary" id="closeDialogBtn" type="button">Закрыть</button>
     </div>
     <div class="dialog-body">
+      <div class="copy-mode">
+        <button class="mode active" id="dialogModeShort" type="button">Короткий текст для формы</button>
+        <button class="mode" id="dialogModeFull" type="button">Полный текст с журналом</button>
+      </div>
       <textarea id="appealText" class="mono appeal-textarea" readonly spellcheck="false"></textarea>
-      <p class="small muted">Если на сайте ведомства вставилась только часть текста, нажмите «Выделить весь текст», скопируйте вручную и вставьте снова.</p>
+      <p class="small muted">Для сайтов ведомств используйте короткую версию. Полный текст с журналом оставлен на случай, если поле формы принимает длинные обращения.</p>
     </div>
     <div class="dialog-actions">
       <button id="copyDialogBtn" type="button">Скопировать весь текст</button>
@@ -317,6 +340,7 @@
       const storageKey = "dushonovo_light_user_v1";
       let activeAgencyId = null;
       let lastAppealText = "";
+      let lastAppealMode = "short";
 
       const $ = (id) => document.getElementById(id);
       const sections = Array.from(document.querySelectorAll(".section"));
@@ -444,6 +468,56 @@
         return `По журналу жителей села Душоново, составленному по сообщениям сельского Telegram-чата, зафиксированы повторяющиеся отключения и эпизоды некачественного электроснабжения. Этот журнал не является официальным журналом сетевой организации. Прошу проверить указанные сведения по официальным диспетчерским, аварийным и эксплуатационным журналам.\n\n${insert}`;
       }
 
+      function shortFactsBlock() {
+        const total = outages.length;
+        const first = outages.length ? formatDateRu(outages[outages.length - 1].date) : "";
+        const last = outages.length ? formatDateRu(outages[0].date) : "";
+
+        if (total > 0 && first && last) {
+          return `По гражданскому журналу жителей села Душоново за период ${first} — ${last} зафиксированы повторяющиеся отключения и эпизоды некачественного электроснабжения. Журнал составлен по сообщениям сельского Telegram-чата; прошу проверить эти сведения по официальным диспетчерским, аварийным и эксплуатационным журналам сетевой организации.`;
+        }
+
+        return "Жители села Душоново фиксируют повторяющиеся отключения и эпизоды некачественного электроснабжения. Прошу проверить ситуацию по официальным диспетчерским, аварийным и эксплуатационным журналам сетевой организации.";
+      }
+
+      function compactLines(text) {
+        return String(text || "")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .join("\n");
+      }
+
+      function generateAppealShort(agencyId, user) {
+        const agency = agencyById(agencyId);
+        const from = userBlock(user);
+        const date = todayRu();
+        const intro = `Я проживаю / пользуюсь электроэнергией по адресу: ${user.address}. Мой адрес был затронут повторяющимися отключениями электроэнергии в селе Душоново городского округа Щёлково Московской области.`;
+        const facts = shortFactsBlock();
+
+        const commonAsk = "Прошу установить ответственную сетевую организацию, питающую линию/ТП/фидер, проверить причины повторяющихся отключений, наличие сезонной перегрузки и сообщить конкретный план мероприятий, сроки и ответственное подразделение.";
+
+        const templates = {
+          rosseti: `В ПАО «Россети Московский регион»\n${from}\nЗаявление\n${intro}\n${facts}\n${commonAsk}\nПрошу дать ответ по существу, без общей формулировки о технологическом нарушении.\nДата: ${date}\n${user.fullName}`,
+
+          mosenergosbyt: `В АО «Мосэнергосбыт»\n${from}\nПретензия по качеству электроснабжения\n${intro}\n${facts}\nПрошу зарегистрировать претензию, сообщить ответственную сетевую организацию, направить запрос сетевой организации о причинах отключений и разъяснить порядок фиксации нарушения качества услуги и перерасчёта.\nДата: ${date}\n${user.fullName}`,
+
+          dobrodel: `В Министерство энергетики Московской области / через портал «Добродел»\n${from}\nОбращение\n${intro}\n${facts}\nПрошу взять ситуацию на контроль, запросить у сетевой организации причины повторяющихся отключений, проверить достаточность мощности и наличие сезонной перегрузки, а также сообщить план технических мер и сроки.\nДата: ${date}\n${user.fullName}`,
+
+          administration: `Главе городского округа Щёлково / в администрацию городского округа Щёлково\n${from}\nОбращение\n${intro}\n${facts}\nПрошу администрацию направить официальный запрос в ответственную сетевую организацию, установить питающую линию/ТП/фидер, проверить причины повторяющихся отключений, взять вопрос на контроль и сообщить жителям план мероприятий и сроки.\nДата: ${date}\n${user.fullName}`,
+
+          rostekhnadzor: `В Ростехнадзор\n${from}\nЗаявление\n${intro}\n${facts}\nПрошу проверить техническое состояние питающей линии, трансформаторной подстанции, коммутационного оборудования и защит, а также наличие сезонной перегрузки сетевого оборудования.\nДата: ${date}\n${user.fullName}`,
+
+          rospotrebnadzor: `В Управление Роспотребнадзора по Московской области\n${from}\nЗаявление\n${intro}\n${facts}\nПрошу проверить соблюдение прав потребителей и требований к качеству коммунальной услуги электроснабжения, а также разъяснить порядок фиксации нарушения качества услуги и перерасчёта.\nДата: ${date}\n${user.fullName}`,
+
+          prosecutor: `В прокуратуру Московской области\n${from}\nЗаявление\n${intro}\n${facts}\nПрошу провести проверку соблюдения законодательства об электроэнергетике и прав потребителей, установить ответственную сетевую организацию и проверить действия или бездействие сетевой организации, гарантирующего поставщика и органов власти.\nДата: ${date}\n${user.fullName}`,
+
+          fas: `В ФАС России / Московское областное УФАС\n${from}\nЗаявление\n${intro}\n${facts}\nПрошу рассмотреть ситуацию в пределах компетенции антимонопольного органа, если в действиях ответственной сетевой организации имеются признаки злоупотребления положением, дискриминационного поведения или уклонения от необходимых мероприятий.\nДата: ${date}\n${user.fullName}`
+        };
+
+        return compactLines(templates[agencyId] || `В ${agency ? agency.name : "ведомство"}\n${from}\nОбращение\n${intro}\n${facts}\nПрошу проверить ситуацию и сообщить ответ по существу.\nДата: ${date}\n${user.fullName}`);
+      }
+
       function generateAppeal(agencyId, user) {
         const agency = agencyById(agencyId);
         const facts = commonFactsBlock();
@@ -471,18 +545,37 @@
         return templates[agencyId] || `В ${agency ? agency.name : "ведомство"}\n\n${from}\n\nОбращение\n\n${baseIntro}\n\n${facts}\n\nПрошу проверить ситуацию и сообщить ответ по существу.\n\nДата: ${date}\n${user.fullName}`;
       }
 
-      function openAppealDialog(agencyId) {
+      function setDialogMode(mode) {
+        lastAppealMode = mode === "full" ? "full" : "short";
+
+        const shortBtn = $("dialogModeShort");
+        const fullBtn = $("dialogModeFull");
+        if (shortBtn && fullBtn) {
+          shortBtn.classList.toggle("active", lastAppealMode === "short");
+          fullBtn.classList.toggle("active", lastAppealMode === "full");
+        }
+
+        if (!activeAgencyId) return;
+
+        const user = getUserData();
+        lastAppealText = lastAppealMode === "full"
+          ? generateAppeal(activeAgencyId, user)
+          : generateAppealShort(activeAgencyId, user);
+
+        const textBox = $("appealText");
+        textBox.value = lastAppealText;
+        textBox.textContent = lastAppealText;
+        setTimeout(() => { textBox.scrollTop = 0; }, 0);
+      }
+
+      function openAppealDialog(agencyId, mode) {
         if (!validateUserData()) { go("data"); return; }
         saveUserData();
         const agency = agencyById(agencyId);
         activeAgencyId = agencyId;
-        lastAppealText = generateAppeal(agencyId, getUserData());
         $("dialogTitle").textContent = agency ? `Текст: ${agency.name}` : "Текст обращения";
-        const textBox = $("appealText");
-        textBox.value = lastAppealText;
-        textBox.textContent = lastAppealText;
+        setDialogMode(mode || "short");
         $("appealDialog").showModal();
-        setTimeout(() => { textBox.scrollTop = 0; }, 0);
       }
 
       async function copyText(text) {
@@ -528,12 +621,13 @@
 
       function copyAppeal(agencyId) {
         if (!validateUserData()) { go("data"); return; }
-        const text = generateAppeal(agencyId, getUserData());
+        saveUserData();
+        const text = generateAppealShort(agencyId, getUserData());
         copyText(text)
-          .then(() => showNotice("Весь текст скопирован. Теперь откройте сайт ведомства, вставьте текст и отправьте обращение от своего имени."))
+          .then(() => showNotice(`Короткий текст для формы скопирован: ${text.length} знаков. Вставьте его в поле обращения.`))
           .catch(() => {
-            openAppealDialog(agencyId);
-            showNotice("Автокопирование не сработало. Открыл текст: нажмите «Выделить весь текст» и скопируйте вручную.");
+            openAppealDialog(agencyId, "short");
+            showNotice("Автокопирование не сработало. Открыл короткий текст: нажмите «Выделить весь текст» и скопируйте вручную.");
           });
       }
 
@@ -607,7 +701,7 @@
             ${agency.urlHint ? `<p class="muted small">${escapeHtml(agency.urlHint)}</p>` : ""}
             <div class="actions">
               <button type="button" data-action="show" data-agency="${agency.id}">Показать текст</button>
-              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Скопировать текст</button>
+              <button type="button" class="secondary" data-action="copy" data-agency="${agency.id}">Скопировать короткий текст</button>
               <button type="button" class="secondary" data-action="site" data-agency="${agency.id}">Открыть сайт ведомства</button>
               <button type="button" class="ok" data-action="sent" data-agency="${agency.id}">Я отправил</button>
               <button type="button" class="ghost" data-action="answer" data-agency="${agency.id}">Получил ответ</button>
@@ -676,6 +770,9 @@
       $("quickAnswerBtn").addEventListener("click", () => openTrackForm("receivedAnswer", "other"));
       $("closeDialogBtn").addEventListener("click", () => $("appealDialog").close());
       $("closeDialogBtn2").addEventListener("click", () => $("appealDialog").close());
+      $("dialogModeShort").addEventListener("click", () => setDialogMode("short"));
+      $("dialogModeFull").addEventListener("click", () => setDialogMode("full"));
+
       $("copyDialogBtn").addEventListener("click", () => {
         const textBox = $("appealText");
         const text = textBox.value || lastAppealText || "";
